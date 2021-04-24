@@ -1,4 +1,4 @@
-# mie424-project
+# Fairness in Machine Learning
 
 Experiments were run on three papers relevant to fairness: “Too Relaxed to Be Fair” (Lohaus et al.), “Mechanisms of Fair Classification” (Zafar et al.), and “Two-Player Games for Efficient Non-Convex Constrained Optimization” (Cotter et al.) on two different datasets: 1) a Recidivism dataset and 2) an Adult dataset for classifying annual income as high/low. These experiments can be seen at the following directories and files:
 
