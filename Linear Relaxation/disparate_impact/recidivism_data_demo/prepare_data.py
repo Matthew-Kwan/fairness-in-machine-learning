@@ -22,7 +22,7 @@ def load_recidivism_data(load_data_size=None):
     """
 
     # Load in the data
-    data = pd.read_csv('recidivism_cleaned.csv')
+    data = pd.read_csv('new_Recidivism.csv')
 
     # split it out into the proper groups
     X = data.drop(['Race', 'Recidivism'], axis=1)

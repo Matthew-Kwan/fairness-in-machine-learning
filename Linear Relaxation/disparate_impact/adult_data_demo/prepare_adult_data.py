@@ -141,6 +141,7 @@ def load_adult_data(load_data_size=None):
     # convert to numpy arrays for easy handline
     X = np.array(X, dtype=float).T
     y = np.array(y, dtype = float)
+    print(X.shape)
     for k, v in list(x_control.items()): x_control[k] = np.array(v, dtype=float)
 
     # shuffle the data

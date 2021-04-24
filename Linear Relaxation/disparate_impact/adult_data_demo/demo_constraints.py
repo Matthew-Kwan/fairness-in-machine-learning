@@ -3,8 +3,35 @@ import numpy as np
 from prepare_adult_data import *
 sys.path.insert(0, '../fair_classification/') # the code for fair classification is in this directory
 import utils as ut
+import searchfair_utils as sf_ut
 import loss_funcs as lf # loss funcs that can be optimized subject to various constraints
 
+def average(list):
+      return sum(list)/len(list)
+
+def print_clf_stats(model, x_train, x_test, y_train, y_test, s_train, s_test):
+
+		x_test_predicted = np.dot(x_test, model)
+		x_train_predicted = np.dot(x_train, model)
+
+		c_train = np.copy(s_train['sex'])
+		c_test = np.copy(s_test['sex'])
+		c_train = np.where(c_train==0.0,-1.0,c_train)
+		c_test = np.where(c_test==0.,-1.0,c_test)
+
+		train_acc = sf_ut.get_accuracy(np.sign(x_train_predicted), y_train)
+		test_acc = sf_ut.get_accuracy(np.sign(x_test_predicted), y_test)
+		test_DDP, test_DEO = sf_ut.compute_fairness_measures(np.sign(x_test_predicted), y_test, c_test)
+		train_DDP, train_DEO = sf_ut.compute_fairness_measures(np.sign(x_train_predicted), y_train, c_train)
+
+		# print(10*'-'+"Train"+10*'-')
+		# print("Accuracy: %0.4f%%" % (train_acc * 100))
+		# print("DDP: %0.4f%%" % (train_DDP * 100), "DEO: %0.4f%%" % (train_DEO * 100))
+		# print(10*'-'+"Test"+10*'-')
+		# print("Accuracy: %0.4f%%" % (test_acc * 100))
+		# print("DDP: %0.4f%%" % (test_DDP * 100), "DEO: %0.4f%%" % (test_DEO * 100))
+
+		return train_acc, test_acc, train_DDP, test_DDP, train_DEO, test_DEO
 
 
 def test_adult_data():
@@ -34,19 +61,43 @@ def test_adult_data():
 	gamma = None
 
 	def train_test_classifier():
-		w = ut.train_model(x_train, y_train, x_control_train, loss_function, apply_fairness_constraints, apply_accuracy_constraint, sep_constraint, sensitive_attrs, sensitive_attrs_to_cov_thresh, gamma)
-		train_score, test_score, correct_answers_train, correct_answers_test = ut.check_accuracy(w, x_train, y_train, x_test, y_test, None, None)
-		distances_boundary_test = (np.dot(x_test, w)).tolist()
-		all_class_labels_assigned_test = np.sign(distances_boundary_test)
-		correlation_dict_test = ut.get_correlations(None, None, all_class_labels_assigned_test, x_control_test, sensitive_attrs)
-		cov_dict_test = ut.print_covariance_sensitive_attrs(None, x_test, distances_boundary_test, x_control_test, sensitive_attrs)
-		p_rule = ut.print_classifier_fairness_stats([test_score], [correlation_dict_test], [cov_dict_test], sensitive_attrs[0])
-		return w, p_rule, test_score
+			print('TRAIN TEST')
+
+			train_acc = []
+			test_acc = []
+			train_DDP = []
+			test_DDP = []
+			train_DEO = []
+			test_DEO = []
+
+			for i in range(0,5):
+					w = ut.train_model(x_train, y_train, x_control_train, loss_function, apply_fairness_constraints, apply_accuracy_constraint, sep_constraint, sensitive_attrs, sensitive_attrs_to_cov_thresh, gamma)
+					train_score, test_score, correct_answers_train, correct_answers_test = ut.check_accuracy(w, x_train, y_train, x_test, y_test, None, None)
+					distances_boundary_test = (np.dot(x_test, w)).tolist()
+					all_class_labels_assigned_test = np.sign(distances_boundary_test)
+					correlation_dict_test = ut.get_correlations(None, None, all_class_labels_assigned_test, x_control_test, sensitive_attrs)
+					cov_dict_test = ut.print_covariance_sensitive_attrs(None, x_test, distances_boundary_test, x_control_test, sensitive_attrs)
+					p_rule = ut.print_classifier_fairness_stats([test_score], [correlation_dict_test], [cov_dict_test], sensitive_attrs[0])
+					train_acc_val, test_acc_val, train_DDP_val, test_DDP_val, train_DEO_val, test_DEO_val = print_clf_stats(w, x_train, x_test, y_train, y_test, x_control_train, x_control_test)
+					train_acc.append(train_acc_val)
+					test_acc.append(test_acc_val)
+					train_DDP.append(train_DDP_val)
+					test_DDP.append(test_DDP_val)
+					train_DEO.append(train_DEO_val)
+					test_DEO.append(test_DEO_val)
+
+			print(10*'-'+"Train"+10*'-')
+			print("Accuracy: %0.4f%%" % (average(train_acc) * 100))
+			print("DDP: %0.4f%%" % (average(train_DDP) * 100), "DEO: %0.4f%%" % (average(train_DEO) * 100))
+			print(10*'-'+"Test"+10*'-')
+			print("Accuracy: %0.4f%%" % (average(test_acc) * 100))
+			print("DDP: %0.4f%%" % (average(test_DDP) * 100), "DEO: %0.4f%%" % (average(test_DEO) * 100))
+			return w, p_rule, test_score
 
 
 	""" Classify the data while optimizing for accuracy """
-	print
-	print "== Unconstrained (original) classifier =="
+	print()
+	print("== Unconstrained (original) classifier ==")
 	# all constraint flags are set to 0 since we want to train an unconstrained (original) classifier
 	apply_fairness_constraints = 0
 	apply_accuracy_constraint = 0
@@ -58,8 +109,8 @@ def test_adult_data():
 	apply_accuracy_constraint = 0
 	sep_constraint = 0
 	sensitive_attrs_to_cov_thresh = {"sex":0}
-	print
-	print "== Classifier with fairness constraint =="
+	print()
+	print("== Classifier with fairness constraint ==")
 	w_f_cons, p_f_cons, acc_f_cons  = train_test_classifier()
 
 
@@ -69,7 +120,7 @@ def test_adult_data():
 	apply_accuracy_constraint = 1 # now, we want to optimize fairness subject to accuracy constraints
 	sep_constraint = 0
 	gamma = 0.5 # gamma controls how much loss in accuracy we are willing to incur to achieve fairness -- increase gamme to allow more loss in accuracy
-	print "== Classifier with accuracy constraint =="
+	print("== Classifier with accuracy constraint ==")
 	w_a_cons, p_a_cons, acc_a_cons = train_test_classifier()
 
 	"""
@@ -81,7 +132,7 @@ def test_adult_data():
 	apply_accuracy_constraint = 1 # now, we want to optimize accuracy subject to fairness constraints
 	sep_constraint = 1 # set the separate constraint flag to one, since in addition to accuracy constrains, we also want no misclassifications for certain points (details in demo README.md)
 	gamma = 1000.0
-	print "== Classifier with accuracy constraint (no +ve misclassification) =="
+	print("== Classifier with accuracy constraint (no +ve misclassification) ==")
 	w_a_cons_fine, p_a_cons_fine, acc_a_cons_fine  = train_test_classifier()
 
 	return
