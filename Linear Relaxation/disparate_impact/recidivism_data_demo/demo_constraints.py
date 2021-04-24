@@ -1,21 +1,18 @@
 import os,sys
 import numpy as np
-from prepare_adult_data import *
+from prepare_data import *
 sys.path.insert(0, '../fair_classification/') # the code for fair classification is in this directory
 import utils as ut
 import searchfair_utils as sf_ut
 import loss_funcs as lf # loss funcs that can be optimized subject to various constraints
-
-def average(list):
-      return sum(list)/len(list)
 
 def print_clf_stats(model, x_train, x_test, y_train, y_test, s_train, s_test):
 
 		x_test_predicted = np.dot(x_test, model)
 		x_train_predicted = np.dot(x_train, model)
 
-		c_train = np.copy(s_train['sex'])
-		c_test = np.copy(s_test['sex'])
+		c_train = np.copy(s_train['Race'])
+		c_test = np.copy(s_test['Race'])
 		c_train = np.where(c_train==0.0,-1.0,c_train)
 		c_test = np.where(c_test==0.,-1.0,c_test)
 
@@ -33,13 +30,12 @@ def print_clf_stats(model, x_train, x_test, y_train, y_test, s_train, s_test):
 
 		return train_acc, test_acc, train_DDP, test_DDP, train_DEO, test_DEO
 
-
-def test_adult_data():
+def test_recidivism_data():
 
 
 	""" Load the adult data """
-	X, y, x_control = load_adult_data(load_data_size=10000) # set the argument to none, or no arguments if you want to test with the whole data -- we are subsampling for performance speedup
-	ut.compute_p_rule(x_control["sex"], y) # compute the p-rule in the original data
+	X, y, x_control = load_recidivism_data(load_data_size=None) # set the argument to none, or no arguments if you want to test with the whole data -- we are subsampling for performance speedup
+	ut.compute_p_rule(x_control["Race"], y) # compute the p-rule in the original data
 
 
 
@@ -48,17 +44,17 @@ def test_adult_data():
 	train_fold_size = 0.7
 	x_train, y_train, x_control_train, x_test, y_test, x_control_test = ut.split_into_train_test(X, y, x_control, train_fold_size)
 
-
-
-
 	apply_fairness_constraints = None
 	apply_accuracy_constraint = None
 	sep_constraint = None
 
 	loss_function = lf._logistic_loss
-	sensitive_attrs = ["sex"]
+	sensitive_attrs = ["Race"]
 	sensitive_attrs_to_cov_thresh = {}
 	gamma = None
+
+	def average(list):
+    		return sum(list)/len(list)
 
 	def train_test_classifier():
 			print('TRAIN TEST')
@@ -108,7 +104,7 @@ def test_adult_data():
 	apply_fairness_constraints = 1 # set this flag to one since we want to optimize accuracy subject to fairness constraints
 	apply_accuracy_constraint = 0
 	sep_constraint = 0
-	sensitive_attrs_to_cov_thresh = {"sex":0}
+	sensitive_attrs_to_cov_thresh = {"Race":0}
 	print()
 	print("== Classifier with fairness constraint ==")
 	w_f_cons, p_f_cons, acc_f_cons  = train_test_classifier()
@@ -138,7 +134,7 @@ def test_adult_data():
 	return
 
 def main():
-	test_adult_data()
+	test_recidivism_data()
 
 
 if __name__ == '__main__':
