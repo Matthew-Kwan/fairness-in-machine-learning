@@ -1,4 +1,4 @@
-# Classification without disparate impact
+# Mechanisms of Fair Classification
 
 ## File Structure
 
